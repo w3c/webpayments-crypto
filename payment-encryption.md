@@ -27,7 +27,7 @@ Eve tries to get information about communication between Bob and Alice and misus
 
 The public key shared by Bob would be in [certificate format (X.509)](https://en.wikipedia.org/wiki/X.509). The file should be in [PEM format](https://tools.ietf.org/html/rfc7468) (E.g. '*.pem')
 
-## ** Encryption of Data & Data Integrity **
+## **Encryption of Data & Data Integrity**
 
 A random AES 256 bit key would be generated and used as CEK (Content Encryption Key). CEK would be used to encrypt payload with algorithm of AES-256-GCM. This would generate IV and Authentication Tag. Authentication Tag is like MAC(Message Authentication Code) and provides data integrity. After encryption of data CEK would be encrypted using RSA_OAEP_256 algorithm.
 
