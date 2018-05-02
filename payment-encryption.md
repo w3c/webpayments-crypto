@@ -25,7 +25,7 @@ Eve tries to get information about communication between Bob and Alice and misus
 **Algorithm**: RSA
 **Key Length**: 2048 bits
 
-The public key shared by Bob would be in certificate format (X.509). The file should be in PEM format (E.g. '*.pem')
+The public key shared by Bob would be in [certificate format (X.509)](https://en.wikipedia.org/wiki/X.509). The file should be in [PEM format](https://tools.ietf.org/html/rfc7468) (E.g. '*.pem')
 
 ## ** Encryption of Data & Data Integrity **
 
