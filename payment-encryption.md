@@ -74,7 +74,7 @@ This is payload encrypted by use of AES 256 bits key and AES-GCM algorithm.
 
 ### Integrity value
 
-This would be generated as part of AES-GCM algorithm. Also known as Authentication tag. This allows Bob to know if message is altered by anyone.
+This would be generated as part of AES-GCM algorithm. Also known as Authentication tag. This allows Bob to know if anyone has altered the message.
 
 ## Message Sample:
 
