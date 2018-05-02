@@ -10,7 +10,7 @@
 
 ### Data Receiver (Bob)
 
-Bob is intending to receive sensitive information. Bob shares his public key to Alice.
+Bob is intending to receive sensitive information. Bob shares his public key with Alice.
 
 ### Data Provider (Alice)
 
@@ -18,7 +18,7 @@ Alice uses public key provided by Bob to encrypt sensitive data.
 
 ### Attacker (Eve)
 
-Eve tries to get information about communication between Bob and Alice and misuse the information for his benefit.
+Eve tries to get information about communication between Bob and Alice and misuse the information for her benefit.
 
 ## **Public Key Definition**
 
