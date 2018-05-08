@@ -163,3 +163,4 @@ String decryptedJson = jwt.serialize();
 * JWT RFC - https://tools.ietf.org/html/rfc7519
 * AES GCM - https://en.wikipedia.org/wiki/Galois/Counter_Mode
 * Nimbus (Connect2id) Example : https://connect2id.com/products/nimbus-jose-jwt/examples/jwt-with-rsa-encryption
+* JWE RFC - https://tools.ietf.org/html/rfc7516
