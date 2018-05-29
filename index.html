@@ -1,38 +1,276 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
   <head>
-    <meta charset="utf-8">
-    <title>Spec proposal</title>
-    <script src="https://www.w3.org/Tools/respec/respec-w3c-common" class="remove"></script>
+    <meta charset='utf-8'>
+    <title>
+      Payment Method Encryption
+    </title>
+    <script src='https://www.w3.org/Tools/respec/respec-w3c-common' async
+    class='remove'></script>
+    <script src='utils.js' class='remove'></script>
     <script class='remove'>
-      // See https://github.com/w3c/respec/wiki/ for how to configure ReSpec
       var respecConfig = {
-        specStatus: "CG-DRAFT",
-        shortName: "webpayments-crypto",
-        editors: [{
-          name: "tripu"
-        }]
+          github: "https://github.com/w3c/webpayments-crypto/",
+          shortName:  "webpayments-crypto",
+          edDraftURI:   "https://w3c.github.io/webpayments-crypto/",
+          specStatus: "unofficial",
+          editors: [
+                {
+                    name:      "Keyur Patel",
+                    company:   "Mastercard"
+                },
+                {
+                    name:      "Wanli Yang",
+                    company:   "Airbnb"
+                }
+
+          ],
+          useExperimentalStyles: true,
+         license:      "w3c-software-doc",
+         wg:           "Web Payments Working Group",
+         wgURI:        "https://www.w3.org/Payments/WG/",
+         wgPublicList: "public-payments-wg",
+         issueBase:    "https://github.com/w3c/webpayments-crypto/issues/",
+        localBiblio: {
+          "x509": {
+            "href": "https://www.itu.int/itu-t/recommendations/rec.aspx?rec=X.509",
+            "publisher": "ITU-T",
+            "title": "ITU-T X.509"
+          },
+        },
       };
     </script>
+    <style>
+    dt { margin-top: 0.75em; }
+    table { margin-top: 0.75em; border-collapse:collapse; border-style:hidden hidden none hidden }
+    table thead { border-bottom:solid }
+    table tbody th:first-child { border-left:solid }
+    table td, table th { border-left:solid; border-right:solid; border-bottom:solid thin; vertical-align:top; padding:0.2em }
+    li { margin-top: 0.5em; margin-bottom: 0.5em;}
+    </style>
   </head>
   <body>
     <section id="abstract">
       <p>
-        This specification does neat stuff.
-      </p>
+	This specification defines an approach for encrypting sensitive payment method response data. It relies on JSON Web Encryption [[!RFC7516]] for algorithms and message structure.</p>
     </section>
-    <section id="sotd">
+    <section id='sotd'>
       <p>
-        This is an unofficial proposal.
+        The working group maintains <a href=
+        "https://github.com/w3c/webpayments-crypto/issues">a list
+        of all bug reports that the group has not yet addressed</a>. Pull
+        requests with proposed specification text for outstanding issues are
+        strongly encouraged.
       </p>
     </section>
+    <section class="informative">
+      <h2>
+        Introduction
+      </h2>
+      <p>
+        This specification defines a way to encrypt payment
+	method response data in conjunction with the 
+        PaymentRequest API [[!payment-request]].
+      </p>
 
-    <section id="introduction">
-      <h2>Introduction</h2>
+      <p>End-to-end encryption from payment handler to processor can
+      help address several use cases:</p>
+	<ul>
+	  <li>Encryption of "raw card data" leaving the browser can lower PCI-DSS assessment burden (for card payments).</li>
+	  <li>Encryption of network tokens, which can reduce the risk that tokenized card information is misused.</li>
+	  <li>Encryption of payment handler data can protect against man-in-the-browser (MITB) attacks.</li>
+	</ul>
+
+      <p>This document describes a standardized approach that
+      leverages asymmetric encryption, to be used by a variety payment
+      method specifications. At a high level, it works as follows:</p>
+
+      <ul>
+	<li>Each payment method identifies which
+      sensitive fields are to be encrypted. Those fields are returned
+      in the response along with the encryption of the full response.</li>
+	<li>The party that calls Payment Request API (whether the merchant or their processor) indicates which public key is to be used by the payment handler to encrypt the entire response.</li>
+	<li>Only the party who has the corresponding private key (e.g., the gateway) can decrypt the response.</li>
+      </ul>
+      
+    </section>
+    <section id="exampleData">
+      <h2>
+        Examples
+      </h2>
+      <section>
+        <h3>
+	  Key Generation Example
+        </h3>
+	<p>This sample shows how how to generate a new key pair using a given security provider.</p>
+        <pre class="example">
+// Key generation
+KeyPairGenerator keyGenerator = null;
+try {
+    keyGenerator = KeyPairGenerator.getInstance("RSA");
+} catch (NoSuchAlgorithmException e) {
+    e.printStackTrace();
+}
+keyGenerator.initialize(2048);
+
+KeyPair kp = keyGenerator.genKeyPair();
+RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+RSAPrivateKey privateKey = (RSAPrivateKey) kp.getPrivate();
+        </pre>
+      </section>
+      <section>
+        <h3>
+          Encryption Example
+        </h3>
+	<p>This sample shows how to encrypt a <a>JSON Web Token</a> (JWT) claim set using a specified public key.</p>
+	<pre class="example">
+	  JWTClaimsSet claimsSet = new JWTClaimsSet();
+claimsSet.setCustomClaim("cardNumber", "5413339000001513");
+claimsSet.setCustomClaim("expiryMonth", "12");
+claimsSet.setCustomClaim("expiryYear", "20");
+claimsSet.setCustomClaim("cryptogram", "AlhlvxmN2ZKuAAESNFZ4GoABFA==");
+claimsSet.setCustomClaim("typeOfCryptogram", "UCAF");
+claimsSet.setCustomClaim("trid", "9812345678");
+claimsSet.setCustomClaim("eci", "242");
+
+
+System.out.println(claimsSet.toJSONObject());
+
+
+// Request JWT encrypted with RSA-OAEP-256 and 128-bit AES/GCM
+JWEHeader header = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
+
+// Create the encrypted JWT object
+EncryptedJWT jwt = new EncryptedJWT(header, claimsSet);
+
+// Create an encrypter with the specified public RSA key
+RSAEncrypter encrypter = new RSAEncrypter(publicKey);
+
+// Do the actual encryption
+try {
+    jwt.encrypt(encrypter);
+} catch (JOSEException e) {
+    e.printStackTrace();
+}
+// Serialise to JWT compact form
+String jwtString = jwt.serialize();
+
+System.out.println(jwtString);
+        </pre>
+      </section>
+      <section>
+        <h3>
+          Decryption Example
+        </h3>
+	<p>	  This sample shows how to decrypt an encrypted JSON Web Token (JWT) claim set using a specified public key.
+</p>
+	<pre class="example">
+// Parse back
+jwt = EncryptedJWT.parse(jwtString);
+
+// Create a decrypter with the specified private RSA key
+RSADecrypter decrypter = new RSADecrypter(privateKey);
+jwt.decrypt(decrypter);
+String decryptedJson = jwt.serialize();
+	</pre>
+      </section>
+    </section>
+    <section id="encryption">
+      <h2>
+        Encryption
+      </h2>
+      <section id="key">
+	<h3>Public Key</h3>
+	<p>The <dfn>content encryption key</dfn> MUST be a 2048-bit <a>RSA public key</a> shared via an <a>X.509 certificate</a> in a file encoded according to [[!RFC7468]].</p>
+      </section>
+      <section id="message">
+	<h3>
+          Message Structure
+	</h3>
+	<p>This specification leverages <a>JSON Web Encryption</a>. The result of using this specification is a <a>JWE Compact Serialization</a> with the
+following structure:</p>
+
+<pre>
+  (header).(encrypted key).(initialization vector).(ciphertext).(authentication tag)
+</pre>
+
+	<p>Each component is <a>BASE64URL encoded</a>. The components are concatenated and separated by a period (".").</p>
+	<section>
+	  <h3>Header</h3>
+	  <p>The <dfn>header</dfn> is a <a>JOSE Header</a>, which describes the encryption to be applied to the plaintext. Implementations of this specification MUST use the following parameters and values:</p>
+	  <ul>
+	    <li>enc: <a>AES GCM</a> using a 256-bit key</li>
+	    <li>alg: <a>RSA OAEP 256</a></li>
+	  </ul>
+	</section>
+	<section>
+	  <h3>Encrypted Key</h3>
+	  <p>The <dfn>encrypted key</dfn> is the <a>content encryption key</a>
+	    that has been encrypted using the <a>RSA OAEP 256</a> algorithm.
+	    It is a <a>JWE Encrypted Key</a>.
+	  </p>
+	</section>
+	<section>
+	  <h3>Initialization Vector</h3>
+	  <p>The <dfn>initialization vector</dfn> is a randomly generated object used in encryption is shared for the decryption of cipher text. It is a <a>JWE initialization vector</a>.</p>
+	</section>
+	<section>
+	  <h3>Ciphertext</h3>
+	  <p>The <dfn>ciphertext</dfn> is the result of encryption on the plaintext &mdash;the sensitive data of the payment method&mdash; with the algorithm named in the <a>header</a>, using the <a>content encryption key</a> and the <a>initialization vector</a>.</p>
+	  <p class="issue" title="How is plaintext built?">
+	    What algorithm is used to build plaintext from method-specific JSON?
+	  </p>
+	</section>
+	<section>
+	  <h3>Authentication TAG</h3>
+	  <p>The <dfn>authentication tag</dfn> allows the receiver to detect whether the message has been altered. It is a <a>JWE Authentication TAG</a> and is generated during the encryption operation.</p>
+	</section>
+      </section>
+    </section>
+    <section id="decryption">
+      <h2>Decryption</h2>
+      <p>@@Todo: Describe how to decrypt the encrypted data and the JSON form it takes.</p>
+    </section>
+    <section id="howtouse">
+      <h2>
+        How to Use this Specification within a Payment Method Specification
+      </h2>
+      <p>@@Todo: Describe how to reference this specification from within a payment method specification.@@</p>
+    </section>
+    <section id="dependencies">
+      <h2>
+        Dependencies
+      </h2>
       <p>
-        See <a href="https://github.com/w3c/respec/wiki/User's-Guide">ReSpec's user guide</a>
-        for how toget started!
+        This specification relies on several other underlying specifications.
       </p>
+      <dl>
+        <dt>X.509</dt>
+	<dd>
+	  The term <dfn>X.509 certificate</dfn> is defined by [[!X509]].
+	</dd>
+        <dt>JSON Web Encryption</dt>
+	<dd>
+	  The terms <dfn>JWE Compact Serialization</dfn>, <dfn>JSON Web Encryption</dfn>, <dfn>JWE Encrypted Key</dfn>, <dfn>JOSE Header</dfn>, <dfn>JWE Ciphertext</dfn>, <dfn>JWE Authentication Tag</dfn> and <dfn>JWE Initialization Vector</dfn> are defined by [[!RFC7516]].
+	</dd>
+	<dt>JSON Web Algorithms</dt>
+	<dd>
+	  The terms <dfn>AES GCM</dfn> and <dfn>RSA OAEP 256</dfn> are defined by [[!RFC7518]].
+	</dd>
+        <dt>JSON Web Token</dt>
+	<dd>
+	  The term <dfn>JSON Web Token</dfn> is defined by [[!RFC7519]].
+	</dd>
+        <dt>     Public-Key Cryptography Standards (PKCS) #1: RSA Cryptography
+          Specifications Version 2.1</dt>
+	<dd>
+	  The term <dfn>RSA public key</dfn> is defined by [[!RFC3447]].
+	</dd>
+	<dt>The Base16, Base32, and Base64 Data Encodings</dt>
+	<dd>
+	  The term <dfn>BASE64URL encoded</dfn> is defined in [[!RFC4648]].
+	</dd>
+      </dl>
     </section>
   </body>
 </html>
