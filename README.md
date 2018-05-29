@@ -1,5 +1,4 @@
 
 # Specification 'webpayments-crypto'
 
-This is the repository for webpayments-crypto. You're welcome to contribute! Let's make the Web rock our socks
-off!
+See the [Payment Method Encryption Specification](https://rawgit.com/w3c/webpayments-crypto/gh-pages/index.html)
