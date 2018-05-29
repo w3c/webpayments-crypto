@@ -32,7 +32,7 @@
          wgPublicList: "public-payments-wg",
          issueBase:    "https://github.com/w3c/webpayments-crypto/issues/",
         localBiblio: {
-          "x509": {
+          "X509": {
             "href": "https://www.itu.int/itu-t/recommendations/rec.aspx?rec=X.509",
             "publisher": "ITU-T",
             "title": "ITU-T X.509"
@@ -73,7 +73,7 @@
         PaymentRequest API [[!payment-request]].
       </p>
 
-      <p>End-to-end encryption from payment handler to processor can
+      <p>End-to-end encryption from <a>payment handler</a> to processor can
       help address several use cases:</p>
 	<ul>
 	  <li>Encryption of "raw card data" leaving the browser can lower PCI-DSS assessment burden (for card payments).</li>
@@ -89,7 +89,7 @@
 	<li>Each payment method identifies which
       sensitive fields are to be encrypted. Those fields are returned
       in the response along with the encryption of the full response.</li>
-	<li>The party that calls Payment Request API (whether the merchant or their processor) indicates which public key is to be used by the payment handler to encrypt the entire response.</li>
+	<li>The party that calls Payment Request API (whether the merchant or their processor) indicates which public key is to be used by the <a>payment handler</a> to encrypt the entire response.</li>
 	<li>Only the party who has the corresponding private key (e.g., the gateway) can decrypt the response.</li>
       </ul>
       
@@ -102,7 +102,7 @@
         <h3>
 	  Key Generation Example
         </h3>
-	<p>This sample shows how how to generate a new key pair using a given security provider.</p>
+	<p>This sample shows how to generate a new key pair using a given security provider.</p>
         <pre class="example">
 // Key generation
 KeyPairGenerator keyGenerator = null;
@@ -180,8 +180,12 @@ String decryptedJson = jwt.serialize();
         Encryption
       </h2>
       <section id="key">
-	<h3>Public Key</h3>
+	<h3>Content Encryption key</h3>
 	<p>The <dfn>content encryption key</dfn> MUST be a 2048-bit <a>RSA public key</a> shared via an <a>X.509 certificate</a> in a file encoded according to [[!RFC7468]].</p>
+
+	<p>How a <a>payment handler</a> acquires the content encryption key is outside the scope of this specification. See the section on <a href="#howtouse">how to use this specification within a payment method specification</a>.</p>
+
+	<p class="issue" data-number="1"/>
       </section>
       <section id="message">
 	<h3>
@@ -197,11 +201,13 @@ following structure:</p>
 	<p>Each component is <a>BASE64URL encoded</a>. The components are concatenated and separated by a period (".").</p>
 	<section>
 	  <h3>Header</h3>
-	  <p>The <dfn>header</dfn> is a <a>JOSE Header</a>, which describes the encryption to be applied to the plaintext. Implementations of this specification MUST use the following parameters and values:</p>
+	  <p>The <dfn>header</dfn> is a <a>JOSE Header</a>, which describes the encryption to be applied during <a>plaintext encryption</a>. Implementations of this specification MUST use the following parameters and values:</p>
 	  <ul>
 	    <li>enc: <a>AES GCM</a> using a 256-bit key</li>
 	    <li>alg: <a>RSA OAEP 256</a></li>
 	  </ul>
+
+	  <p class="issue" data-number="2"/>
 	</section>
 	<section>
 	  <h3>Encrypted Key</h3>
@@ -217,14 +223,17 @@ following structure:</p>
 	<section>
 	  <h3>Ciphertext</h3>
 	  <p>The <dfn>ciphertext</dfn> is the result of encryption on the plaintext &mdash;the sensitive data of the payment method&mdash; with the algorithm named in the <a>header</a>, using the <a>content encryption key</a> and the <a>initialization vector</a>.</p>
-	  <p class="issue" title="How is plaintext built?">
-	    What algorithm is used to build plaintext from method-specific JSON?
-	  </p>
+	  <p class="issue" data-number="10"/>
 	</section>
 	<section>
 	  <h3>Authentication TAG</h3>
 	  <p>The <dfn>authentication tag</dfn> allows the receiver to detect whether the message has been altered. It is a <a>JWE Authentication TAG</a> and is generated during the encryption operation.</p>
 	</section>
+      </section>
+      <section>
+	<h3>Plaintext Encryption</h3>
+	<p>Each payment method definition identifies which parts of the response data are sensitive and which are not. <dfn>Plaintext encryption</dfn> applies to the sensitive data and is carried out as follows.</p>
+	<p class="issue" data-number="7"/>
       </section>
     </section>
     <section id="decryption">
@@ -236,6 +245,12 @@ following structure:</p>
         How to Use this Specification within a Payment Method Specification
       </h2>
       <p>@@Todo: Describe how to reference this specification from within a payment method specification.@@</p>
+      <section>
+	<h3>Sensitive and Non-Sensitive Data</h3>
+	<p class="issue" data-number="11"/>
+	<h3>Access to the Content Encryption Key</h3>
+	<p class="issue" data-number="6"/>
+      </section>
     </section>
     <section id="dependencies">
       <h2>
@@ -245,6 +260,10 @@ following structure:</p>
         This specification relies on several other underlying specifications.
       </p>
       <dl>
+	<dt>Payment Handler</dt>
+	<dd>
+	  The term <dfn>payment handler</dfn> is defined in [[!payment-handler]].
+	</dd>
         <dt>X.509</dt>
 	<dd>
 	  The term <dfn>X.509 certificate</dfn> is defined by [[!X509]].
