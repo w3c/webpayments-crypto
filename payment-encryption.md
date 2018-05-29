@@ -1,3 +1,5 @@
+NOTE: Migrated to [Payment Method Encryption](https://rawgit.com/w3c/webpayments-crypto/gh-pages/index.html).
+
 # Objective
 
 * Provide a standard way for encryption of sensitive information
