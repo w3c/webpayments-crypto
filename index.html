@@ -144,7 +144,7 @@
         conformant with [[!RFC7516]] will work.
       </p>
       <section>
-        <h3>
+        <h3 id="keygen-example">
           Key Generation Example
         </h3>
         <p>
@@ -153,7 +153,7 @@
           Web Token</a> specific function and should be repeatable using any
           standard encryption library that conforms with [[!RFC3447]].
         </p>
-        <pre class="example">
+        <pre class="example" title="Key Generation">
           // Key generation
           KeyPairGenerator keyGenerator = null;
           try {
@@ -173,12 +173,12 @@
           of RSA keys (one public and one private).
         </p>
         <p>
-          The public key is provided to the <a>payment handler</a> in the
-          <a>PaymentRequest</a> and used to create the encrypted <a>JSON Web
-          Token</a>.
+          This public key is the "key encryption key" and is referenced from
+          the request data of the <a>PaymentRequest</a>. The <a>payment
+          handler</a> uses it to create the encrypted <a>JSON Web Token</a>.
         </p>
         <p>
-          The private key is retained by the merchant or gateway and used to
+          The private key is retained by the merchant or processor and used to
           decrypt the encrypted <a>JSON Web Token</a>.
         </p>
       </section>
@@ -187,14 +187,12 @@
           Encryption Example
         </h3>
         <p>
-          This sample shows how to encrypt a <a>JSON Web Token</a> (JWT) claim
-          set using an RSA public key (like the one generated above).
+          This example shows how to encrypt a <a>JSON Web Token</a> (JWT) claim
+          set using an RSA public key (like the <a href="#keygen-example">one
+          generated above</a>). This code is based on the example at
+          [[!jwe-with-rsa-example]].
         </p>
-        <p>
-          The code is based on the example at [[!jwe-with-rsa-example]].
-        </p>
-        <p class="issue" data-number="10"></p>
-        <pre class="example">
+        <pre class="example" title="Encryption">
           //Create an empty claims set
           JWTClaimsSet claimsSet = new JWTClaimsSet();
 
@@ -236,8 +234,8 @@
         <p>
           The output of this process is a new <a>JSON Web Token</a> where the
           content is encrypted using <a>AES GCM</a> and a <a>content encryption
-          key</a> that is encrypted using <a>RSA OAEP 256</a> and the public
-          key provided.
+          key</a> that is encrypted using <a>RSA OAEP 256</a> and the <a href=
+          "#keygen-example">public key provided</a>.
         </p>
       </section>
       <section>
@@ -246,11 +244,12 @@
         </h3>
         <p>
           This sample shows how to decrypt an encrypted <a>JSON Web Token</a>
-          (JWT) using an RSA private key (like the one generated above). This
-          would be performed by the merchant or their processor upon receiving
-          the <a>PaymentResponse</a>.
+          (JWT) using an RSA private key (like the <a href=
+          "#keygen-example">one generated above</a>). This would be performed
+          by the merchant or their processor upon receiving the
+          <a>PaymentResponse</a>.
         </p>
-        <pre class="example">
+        <pre class="example" title="Decryption">
           // Parse the JWT from serialized string format
           jwt = EncryptedJWT.parse(jwtString);
 
@@ -313,7 +312,7 @@
           with the following structure:
         </p>
         <pre>
-          (header).(encrypted key).(initialization vector).(ciphertext).(authentication tag)
+(header).(encrypted key).(initialization vector).(ciphertext).(authentication tag)
         </pre>
         <p>
           Each component is <a>BASE64URL encoded</a>. The components are
@@ -344,9 +343,11 @@
             Encrypted Key
           </h3>
           <p>
-            The <dfn>encrypted key</dfn> is the <a>content encryption key</a>
-            that has been encrypted using the <a>RSA OAEP 256</a> algorithm. It
-            is a <a>JWE Encrypted Key</a>.
+            During this process, the payment handler generates and uses a
+            <a>content encryption key</a> (CEK) to produce the
+            <a>ciphertext</a>. The CEK is then encrypted using the <a>RSA OAEP
+            256</a> algorithm and the resulting <a>JWE Encrypted Key</a>
+            becomes part of the message structure.
           </p>
         </section>
         <section>
@@ -365,12 +366,11 @@
           </h3>
           <p>
             The <dfn>ciphertext</dfn> is the result of encryption on the
-            plaintext — the sensitive data of the payment method added as
-            claims tio the JWT — with the algorithm named in the <a>header</a>,
-            using the <a>content encryption key</a> and the <a>initialization
+            plaintext —the sensitive data of the payment method added as claims
+            to the JWT— with the algorithm named in the <a>header</a>, using
+            the <a>content encryption key</a> and the <a>initialization
             vector</a>.
           </p>
-          <p class="issue" data-number="10"></p>
         </section>
         <section>
           <h3>
@@ -392,6 +392,8 @@
           data are sensitive and which are not. <dfn>Plaintext encryption</dfn>
           applies to the sensitive data and is carried out as follows.
         </p>
+        <p class="issue" data-number="13"></p>
+        <p class="issue" data-number="10"></p>
         <p class="issue" data-number="7"></p>
       </section>
     </section>
