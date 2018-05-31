@@ -7,7 +7,6 @@
     </title>
     <script src='https://www.w3.org/Tools/respec/respec-w3c-common' async
     class='remove'></script>
-    <script src='utils.js' class='remove'></script>
     <script class='remove'>
       var respecConfig = {
           github: "https://github.com/w3c/webpayments-crypto/",
@@ -42,6 +41,16 @@
             "publisher": "W3C",
             "title": "Tokenized Card Payment"
           },
+          "nimbus-jose-jwt": {
+            "href": "https://connect2id.com/products/nimbus-jose-jwt/",
+            "publisher": "connect2id",
+            "title": "Nimbus JOSE + JWT Java library"
+          },          
+          "jwe-with-rsa-example": {
+            "href": "https://connect2id.com/products/nimbus-jose-jwt/examples/jwt-with-rsa-encryption/",
+            "publisher": "connect2id",
+            "title": "JSON Web Token (JWT) with RSA encryption"
+          },          
         },
       };
     </script>
@@ -95,23 +104,30 @@
         </li>
       </ul>
       <p>
-        This document describes a standardized approach that leverages
-        asymmetric encryption, to be used by a variety payment method
-        specifications. At a high level, it works as follows:
+        This document describes a standardized approach, that leverages a
+        limited profile of <a>JSON Web Encryption</a>, to be used by a variety
+        of payment method specifications. At a high level, it works as follows:
       </p>
       <ul>
         <li>Each payment method identifies which sensitive fields are to be
-        encrypted. Those fields are returned in the response along with the
-        encryption of the full response.
+        encrypted. Those fields are excluded from the clear-text response but
+        included in the encrypted response.
         </li>
-        <li>The party that calls Payment Request API (whether the merchant or
-        their processor) indicates which public key is to be used by the
-        <a>payment handler</a> to encrypt the entire response.
+        <li>The party that creates the <a>PaymentRequest</a> (whether the
+        merchant or their processor) indicates which public key is to be used
+        by the <a>payment handler</a> to construct the <a>JSON Web Token</a>.
         </li>
         <li>Only the party who has the corresponding private key (e.g., the
-        gateway) can decrypt the response.
+        merchant or their processor) can decrypt the <a>JSON Web Token</a> in
+        the response.
         </li>
       </ul>
+      <p>
+        The profile defined in this specification limits the set of allowed
+        algorithms. This is to prevent the use of algorithms that have been
+        shown, since [[!RFC7518]] was published, to have security
+        vulnerabilities.
+      </p>
     </section>
     <section id="exampleData">
       <h2>
@@ -122,28 +138,49 @@
         Payment Specification [[tokenized-card]] would be encrypted using this
         specification.
       </p>
+      <p>
+        For simplicity, the sample code uses the open source
+        [[!nimbus-jose-jwt]], however the use of any similar library that is
+        conformant with [[!RFC7516]] will work.
+      </p>
       <section>
         <h3>
           Key Generation Example
         </h3>
         <p>
-          This sample shows how to generate a new key pair using a given
-          security provider.
+          This Java code sample shows how to generate a new 2048 bit RSA key
+          pair using the default JVM security provider. This is not a <a>JSON
+          Web Token</a> specific function and should be repeatable using any
+          standard encryption library that conforms with [[!RFC3447]].
         </p>
         <pre class="example">
-// Key generation
-KeyPairGenerator keyGenerator = null;
-try {
-    keyGenerator = KeyPairGenerator.getInstance("RSA");
-} catch (NoSuchAlgorithmException e) {
-    e.printStackTrace();
-}
-keyGenerator.initialize(2048);
+          // Key generation
+          KeyPairGenerator keyGenerator = null;
+          try {
+              keyGenerator = KeyPairGenerator.getInstance("RSA");
+          } catch (NoSuchAlgorithmException e) {
+              e.printStackTrace();
+          }
+          keyGenerator.initialize(2048);
 
-KeyPair kp = keyGenerator.genKeyPair();
-RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
-RSAPrivateKey privateKey = (RSAPrivateKey) kp.getPrivate();
+          KeyPair kp = keyGenerator.genKeyPair();
+          RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+          RSAPrivateKey privateKey = (RSAPrivateKey) kp.getPrivate();
         </pre>
+        <p>
+          The output of this process, which will be performed by the merchant
+          or their processor before creating a <a>PaymentRequest</a>, is a pair
+          of RSA keys (one public and one private).
+        </p>
+        <p>
+          The public key is provided to the <a>payment handler</a> in the
+          <a>PaymentRequest</a> and used to create the encrypted <a>JSON Web
+          Token</a>.
+        </p>
+        <p>
+          The private key is retained by the merchant or gateway and used to
+          decrypt the encrypted <a>JSON Web Token</a>.
+        </p>
       </section>
       <section>
         <h3>
@@ -151,60 +188,98 @@ RSAPrivateKey privateKey = (RSAPrivateKey) kp.getPrivate();
         </h3>
         <p>
           This sample shows how to encrypt a <a>JSON Web Token</a> (JWT) claim
-          set using a specified public key.
+          set using an RSA public key (like the one generated above).
         </p>
+        <p>
+          The code is based on the example at [[!jwe-with-rsa-example]].
+        </p>
+        <p class="issue" data-number="10"></p>
         <pre class="example">
+          //Create an empty claims set
           JWTClaimsSet claimsSet = new JWTClaimsSet();
-claimsSet.setCustomClaim("cardNumber", "5413339000001513");
-claimsSet.setCustomClaim("expiryMonth", "12");
-claimsSet.setCustomClaim("expiryYear", "20");
-claimsSet.setCustomClaim("cryptogram", "AlhlvxmN2ZKuAAESNFZ4GoABFA==");
-claimsSet.setCustomClaim("typeOfCryptogram", "UCAF");
-claimsSet.setCustomClaim("trid", "9812345678");
-claimsSet.setCustomClaim("eci", "242");
 
+          //Add claims to the claims set
+          claimsSet.setCustomClaim("cardNumber", "5413339000001513");
+          claimsSet.setCustomClaim("expiryMonth", "12");
+          claimsSet.setCustomClaim("expiryYear", "20");
+          claimsSet.setCustomClaim("cryptogram", "AlhlvxmN2ZKuAAESNFZ4GoABFA==");
+          claimsSet.setCustomClaim("typeOfCryptogram", "UCAF");
+          claimsSet.setCustomClaim("trid", "9812345678");
+          claimsSet.setCustomClaim("eci", "242");
 
-System.out.println(claimsSet.toJSONObject());
+          //Print JSON representation of claims set  
+          System.out.println(claimsSet.toJSONObject());
 
+          // Request that JWE is created RSA-OAEP-256 and 128-bit AES/GCM
+          JWEHeader header = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
 
-// Request JWT encrypted with RSA-OAEP-256 and 128-bit AES/GCM
-JWEHeader header = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
+          // Create the JWT object (not yet encrypted)
+          EncryptedJWT jwt = new EncryptedJWT(header, claimsSet);
 
-// Create the encrypted JWT object
-EncryptedJWT jwt = new EncryptedJWT(header, claimsSet);
+          // Create an encrypter with the public RSA key
+          RSAEncrypter encrypter = new RSAEncrypter(publicKey);
 
-// Create an encrypter with the specified public RSA key
-RSAEncrypter encrypter = new RSAEncrypter(publicKey);
+          // Do the encryption
+          try {
+              //This library will generate a random content encryption key during this step
+              //Other libararies may require that both the RSA key and the CEK are provided
+              jwt.encrypt(encrypter);
+          } catch (JOSEException e) {
+              e.printStackTrace();
+          }
 
-// Do the actual encryption
-try {
-    jwt.encrypt(encrypter);
-} catch (JOSEException e) {
-    e.printStackTrace();
-}
-// Serialise to JWT compact form
-String jwtString = jwt.serialize();
+          // Serialise to JWT compact form
+          String jwtString = jwt.serialize();
 
-System.out.println(jwtString);
+          System.out.println(jwtString);
         </pre>
+        <p>
+          The output of this process is a new <a>JSON Web Token</a> where the
+          content is encrypted using <a>AES GCM</a> and a <a>content encryption
+          key</a> that is encrypted using <a>RSA OAEP 256</a> and the public
+          key provided.
+        </p>
       </section>
       <section>
         <h3>
           Decryption Example
         </h3>
         <p>
-          This sample shows how to decrypt an encrypted JSON Web Token (JWT)
-          claim set using a specified public key.
+          This sample shows how to decrypt an encrypted <a>JSON Web Token</a>
+          (JWT) using an RSA private key (like the one generated above). This
+          would be performed by the merchant or their processor upon receiving
+          the <a>PaymentResponse</a>.
         </p>
         <pre class="example">
-// Parse back
-jwt = EncryptedJWT.parse(jwtString);
+          // Parse the JWT from serialized string format
+          jwt = EncryptedJWT.parse(jwtString);
 
-// Create a decrypter with the specified private RSA key
-RSADecrypter decrypter = new RSADecrypter(privateKey);
-jwt.decrypt(decrypter);
-String decryptedJson = jwt.serialize();
+          //Verify the JWT uses safe algorithms
+          if(!jwt.getHeader().getAlgorithm().equals(JWEAlgorithm.RSA-OAEP-256))
+            throw new Exception("Invalid 'alg' header, only RSA-OAEP-256 is allowed.")
+          
+          if(!jwt.getHeader().getEncryptionMethod().equals(EncryptionMethod.A128GCM))
+            throw new Exception("Invalid 'enc' header, only A128GCM is allowed.")
+          
+          // Create a decrypter with the specified private RSA key
+          RSADecrypter decrypter = new RSADecrypter(privateKey);
+
+          //Decrypt JWT
+          jwt.decrypt(decrypter);
+
+          // Retrieve JWT claims
+          String cardNumber = jwt.getJWTClaimsSet().getCustomClaim("cardNumber");
+          String expiryMonth = jwt.getJWTClaimsSet().getCustomClaim("expiryMonth");
+          String expiryYear = jwt.getJWTClaimsSet().getCustomClaim("expiryYear");
+          String cryptogram = jwt.getJWTClaimsSet().getCustomClaim("cryptogram");
+          String typeOfCryptogram = jwt.getJWTClaimsSet().getCustomClaim("typeOfCryptogram");
+          String trid = jwt.getJWTClaimsSet().getCustomClaim("trid");
+          String eci = jwt.getJWTClaimsSet().getCustomClaim("eci");
         </pre>
+        <p>
+          The output of this process is a decrypted JWT containing the claims
+          set that was originally encrypted by the <a>payment handler</a>.
+        </p>
       </section>
     </section>
     <section id="encryption">
@@ -213,18 +288,18 @@ String decryptedJson = jwt.serialize();
       </h2>
       <section id="key">
         <h3>
-          Content Encryption key
+          Key Encryption key
         </h3>
         <p>
-          The <dfn>content encryption key</dfn> MUST be a 2048-bit <a>RSA
-          public key</a> shared via an <a>X.509 certificate</a> in a file
-          encoded according to [[!RFC7468]].
+          The <dfn>key encryption key</dfn> MUST be a 2048-bit <a>RSA public
+          key</a> shared via an <a>X.509 certificate</a> in a file encoded
+          according to [[!RFC7468]].
         </p>
         <p>
-          How a <a>payment handler</a> acquires the content encryption key is
-          outside the scope of this specification. See the section on <a href=
-          "#howtouse">how to use this specification within a payment method
-          specification</a>.
+          How a <a>payment handler</a> acquires the <a>key encryption key</a>
+          is outside the scope of this specification. See the section on
+          <a href="#howtouse">how to use this specification within a payment
+          method specification</a>.
         </p>
         <p class="issue" data-number="1"></p>
       </section>
@@ -238,8 +313,8 @@ String decryptedJson = jwt.serialize();
           with the following structure:
         </p>
         <pre>
-  (header).(encrypted key).(initialization vector).(ciphertext).(authentication tag)
-</pre>
+          (header).(encrypted key).(initialization vector).(ciphertext).(authentication tag)
+        </pre>
         <p>
           Each component is <a>BASE64URL encoded</a>. The components are
           concatenated and separated by a period (".").
@@ -255,9 +330,11 @@ String decryptedJson = jwt.serialize();
             parameters and values:
           </p>
           <ul>
-            <li><code>enc</code>: <a>AES GCM</a> using a 256-bit key
+            <li>
+              <code>enc</code>: <a>AES GCM</a> (using a 256-bit key)
             </li>
-            <li><code>alg</code>: <a>RSA OAEP 256</a>
+            <li>
+              <code>alg</code>: <a>RSA OAEP 256</a>
             </li>
           </ul>
           <p class="issue" data-number="2"></p>
@@ -278,8 +355,8 @@ String decryptedJson = jwt.serialize();
           </h3>
           <p>
             The <dfn>initialization vector</dfn> is a randomly generated object
-            used in encryption is shared for the decryption of cipher text. It
-            is a <a>JWE initialization vector</a>.
+            used during encryption, and is shared for the decryption of the
+            cipher text. It is a <a>JWE initialization vector</a>.
           </p>
         </section>
         <section>
@@ -288,9 +365,10 @@ String decryptedJson = jwt.serialize();
           </h3>
           <p>
             The <dfn>ciphertext</dfn> is the result of encryption on the
-            plaintext —the sensitive data of the payment method— with the
-            algorithm named in the <a>header</a>, using the <a>content
-            encryption key</a> and the <a>initialization vector</a>.
+            plaintext — the sensitive data of the payment method added as
+            claims tio the JWT — with the algorithm named in the <a>header</a>,
+            using the <a>content encryption key</a> and the <a>initialization
+            vector</a>.
           </p>
           <p class="issue" data-number="10"></p>
         </section>
@@ -356,6 +434,13 @@ String decryptedJson = jwt.serialize();
       </p>
       <dl>
         <dt>
+          Payment Request
+        </dt>
+        <dd>
+          The <dfn>PaymentRequest</dfn> and <dfn>PaymentResponse</dfn>
+          interfaces are defined in [[!payment-handler]].
+        </dd>
+        <dt>
           Payment Handler
         </dt>
         <dd>
@@ -372,11 +457,11 @@ String decryptedJson = jwt.serialize();
           JSON Web Encryption
         </dt>
         <dd>
-          The terms <dfn>JWE Compact Serialization</dfn>, <dfn>JSON Web
-          Encryption</dfn>, <dfn>JWE Encrypted Key</dfn>, <dfn>JOSE
-          Header</dfn>, <dfn>JWE Ciphertext</dfn>, <dfn>JWE Authentication
-          Tag</dfn> and <dfn>JWE Initialization Vector</dfn> are defined by
-          [[!RFC7516]].
+          The terms <dfn>content encryption key</dfn>, <dfn>JWE Compact
+          Serialization</dfn>, <dfn>JSON Web Encryption</dfn>, <dfn>JWE
+          Encrypted Key</dfn>, <dfn>JOSE Header</dfn>, <dfn>JWE
+          Ciphertext</dfn>, <dfn>JWE Authentication Tag</dfn> and <dfn>JWE
+          Initialization Vector</dfn> are defined by [[!RFC7516]].
         </dd>
         <dt>
           JSON Web Algorithms
