@@ -307,9 +307,10 @@
           Message Structure
         </h3>
         <p>
-          This specification leverages <a>JSON Web Encryption</a>. The result
-          of using this specification is a <a>JWE Compact Serialization</a>
-          with the following structure:
+          This specification leverages <a>JSON Web Encryption</a> to create an
+          <dfn>encrypted message structure</dfn>. The result of using this
+          specification is a <a>JWE Compact Serialization</a> with the
+          following structure:
         </p>
         <pre>
 (header).(encrypted key).(initialization vector).(ciphertext).(authentication tag)
@@ -405,19 +406,27 @@
           <dfn>Plaintext Encryption</dfn>
         </h3>
         <p>
-          Each payment method definition identifies which parts of the response
-          data are sensitive and how that data is added to the <a>JWT claims
-          set</a>. Approaches include:
+          Each payment method definition identifies which part of the
+          <dfn>PaymentResponse</dfn> is encrypted. One member of the
+          <dfn>PaymentResponse</dfn> should hold the <a>encrypted message
+          structure</a>.
+        </p>
+        <p>
+          A payment method may take different approaches to adding data fields
+          to the <a>JWT claims set</a>, including:
         </p>
         <ul>
-          <li>The payment method defines how implementations add response data
+          <li>The payment method defines how a <a>payment handler</a> adds data
           elements individually to the <a>JWT claims set</a>.
           </li>
           <li>The payment method leverages a standardized (IANA-registered)
-          claim name and defines the data structure that will be associated
-          with that claim. (See <a href=
+          claim name; see <a href=
           "https://github.com/w3c/webpayments-crypto/issues/13#issuecomment-393728431">
-            issue 13</a>.
+            issue 13</a>. In this case, the payment method defines the data
+            structure that will be associated by the <a>payment handler</a>
+            with the standardized claim name. When the JWE is decrypted there
+            will be a custom claim that will be a JSON object that follows the
+            data structure.
           </li>
         </ul>
         <p class="issue" data-number="13"></p>
