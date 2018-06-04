@@ -365,11 +365,10 @@
             Ciphertext
           </h3>
           <p>
-            The <dfn>ciphertext</dfn> is the result of encryption on the
-            plaintext —the sensitive data of the payment method added as claims
-            to the JWT— with the algorithm named in the <a>header</a>, using
-            the <a>content encryption key</a> and the <a>initialization
-            vector</a>.
+            The <dfn>ciphertext</dfn> is the result of <a>plaintext
+            encryption</a> of the sensitive data of the payment method, using
+            the algorithm named in the <a>header</a>, the <a>content encryption
+            key</a>, and the <a>initialization vector</a>.
           </p>
         </section>
         <section>
@@ -382,18 +381,6 @@
             TAG</a> and is generated during the encryption operation.
           </p>
         </section>
-      </section>
-      <section>
-        <h3>
-          Plaintext Encryption
-        </h3>
-        <p>
-          Each payment method definition identifies which parts of the response
-          data are sensitive and which are not. <dfn>Plaintext encryption</dfn>
-          applies to the sensitive data and is carried out as follows.
-        </p>
-        <p class="issue" data-number="13"></p>
-        <p class="issue" data-number="7"></p>
       </section>
     </section>
     <section id="decryption">
@@ -415,14 +402,37 @@
       </p>
       <section>
         <h3>
-          Sensitive and Non-Sensitive Data
+          <dfn>Plaintext Encryption</dfn>
         </h3>
-        <p class="issue" data-number="11"></p>
+        <p>
+          Each payment method definition identifies which parts of the response
+          data are sensitive and how that data is added to the <a>JWT claims
+          set</a>. Approaches include:
+        </p>
+        <ul>
+          <li>The payment method defines how implementations add response data
+          elements individually to the <a>JWT claims set</a>.
+          </li>
+          <li>The payment method leverages a standardized (IANA-registered)
+          claim name and defines the data structure that will be associated
+          with that claim. (See <a href=
+          "https://github.com/w3c/webpayments-crypto/issues/13#issuecomment-393728431">
+            issue 13</a>.
+          </li>
+        </ul>
+        <p class="issue" data-number="13"></p>
+        <p class="issue" data-number="7"></p>
       </section>
       <section>
         <h3>
           Access to the Key Encryption Key
         </h3>
+        <p>
+          Each payment method definition describes how the <a>payment
+          handler</a> acquires the <a>key encryption key</a>. For example, the
+          <a>payment handler</a> may retrieve the <a>key encryption key</a> via
+          a URL provided in a <a>PaymentRequest</a>.
+        </p>
         <p class="issue" data-number="6"></p>
       </section>
     </section>
@@ -475,7 +485,8 @@
           JSON Web Token
         </dt>
         <dd>
-          The term <dfn>JSON Web Token</dfn> is defined by [[!RFC7519]].
+          The terms <dfn>JSON Web Token</dfn> and <dfn>JWT claims set</dfn> are
+          defined by [[!RFC7519]].
         </dd>
         <dt>
           Public-Key Cryptography Standards (PKCS) #1: RSA Cryptography
